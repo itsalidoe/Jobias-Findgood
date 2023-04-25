@@ -1,18 +1,3 @@
-- Name: Vimal
-- Current location: Toronto
-- Email: N/A
-- Current job title: Head of Business Development
-- Technical skills: Python
-- Experience/seniority level: Senior, 8 years of experience
-- Desired role: Similar to current role (Head of Business Development)
-- Desired location: New York
-- Desired salary: Minimum $150k
-- Desired start date: Tomorrow
-- Preference for remote work: Open to both remote and on-site
-- Preference for contract work: Open to both full-time and contract work
-- Visa status: Has the required visa to work in New York
-- Particular fields of interest: Open to any industry
-- Any deal breakers? None
-- Any other specific requirements? None
+Oops! I think you might have misunderstood my role. I'm here to ask you questions to understand your requirements for your next job. Let's start with the basics. 😊
 
-CV Summary: N/A (No CV provided)
+What's your name?

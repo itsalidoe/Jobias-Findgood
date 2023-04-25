@@ -5,6 +5,71 @@ import sys
 from yaspin import yaspin
 from dotenv import load_dotenv
 import os
+from config import LLM_TEMP, BOT_NAME, START_SEARCH_COMMAND, INFO_TO_COLLECT, SYSTEM_BOT_PROMPT
+
+from fastapi import FastAPI, File, UploadFile
+from pydantic import BaseModel
+from typing import Literal, Optional
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+class JobSearchInput(BaseModel):
+    user_input: str
+    input_type: Literal["question", "request_job_results"]
+    loading_text: Optional[str] = "Thinking"
+    display_result: Optional[bool] = True
+
+@app.post("/process_input")
+async def process_input(job_search_input: JobSearchInput):
+    user_input = job_search_input.user_input
+    input_type = job_search_input.input_type
+    loading_text = job_search_input.loading_text
+    display_result = job_search_input.display_result
+
+    if input_type == "question":
+        pass  
+    elif input_type == "request_job_results":
+        pass  
+
+
+    if input_type == "question":
+        pass  
+    elif input_type == "request_job_results":
+        pass  
+
+@app.post("/upload_cv")
+async def upload_cv(cv: UploadFile = File(...)):
+    try:
+        cv_content = await cv.read()
+        return {"status": "success", "message": "CV uploaded successfully"}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"status": "error", "message": str(e)})
+
+class AnswerInput(BaseModel):
+    prompt: str
+
+@app.post("/answer_question")
+async def answer_question(answer_input: AnswerInput):
+    try:
+        user_input = answer_input.prompt
+        response = process_input(user_input, display_result=False)
+        return {"status": "success", "response": response}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"status": "error", "message": str(e)})
+
+
+@app.get("/get_jobs")
+async def get_jobs():
+    try:
+        with yaspin(text="Looking for jobs...", color="magenta") as spinner:
+            summary = process_input("Summarising user inputs...", display_result=False)
+            Hunt.store_job_search_inputs(summary)
+            output = Hunt.fetch_jobs(summary)
+            spinner.ok("✔")
+        return {"status": "success", "jobs": output}
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"status": "error", "message": str(e)})
 
 from langchain.chat_models import ChatOpenAI
 from langchain.schema import (
@@ -31,44 +96,6 @@ except ImportError:
 import gather as Gather
 import hunt as Hunt
 
-# Constants - Move to config file
-LLM_TEMP = 0.5
-BOT_NAME = "Jobias Findgood"
-START_SEARCH_COMMAND = "START_JOB_SEARCH"
-INFO_TO_COLLECT = """
-- Name (required)
-- Current location (required)
-- Email (optional)
-- Current job title (optional)
-- Technical skills (optional)
-- Experience/seniority level (optional)
-- Desired role (optional)
-- Desired location (optional)
-- Desired salary (optional)
-- Desired start date (optional)
-- Preference for remote work (optional)
-- Preference for contract work (optional)
-- Do you have required visa to work in the desired location? (optional)
-- Particular fields of interest (optional)
-- Any deal breakers? (optional)
-- Any other specific requirements? (optional)
-"""
-SYSTEM_BOT_PROMPT = """
-Act as an expert technical recruiter to find me my next great job. Your expertise is finding roles in technology: engineering, product and design. Your name is {bot_name}. Do not introduce yourself at the start of the conversation.
-Ask me questions to understand my individual requirements.
-Ask questions one by one for a more natural conversation experience.
-Be fun and personable. Use emojis if you like.
-I will provide you with the contents of my CV as a starting point so you know my skills and experience.
-
-Here's a list of info you should try and collect to help you find me a job. Some of these are optional, but the more you can provide, the better. If you're not sure about something, just leave it blank.
-{info_to_collect}
-
-When you have enough information to start a job search, or if I explicitly ask you to, respond with the message: {start_search_command}
-""".format(bot_name=BOT_NAME, start_search_command=START_SEARCH_COMMAND, info_to_collect=INFO_TO_COLLECT)
-
-
-
-# Setup
 load_dotenv()
 colorama.init()
 
@@ -91,7 +118,6 @@ conversation = ConversationChain(
     prompt=prompt
 )
 
-# Action handling
 commands = {
     START_SEARCH_COMMAND: "Start the job search now we have the needed user inputs"
 }
@@ -102,8 +128,6 @@ def handle_command(command):
   else:
     print_system_message("Sorry, I don't understand that command. Please try again.")
 
-
-# Welcome
 def display_welcome():
   welcome_msg = """
  \n
@@ -116,7 +140,6 @@ Once we get that sorted, I will start looking for some cool jobs for you.
   
   print(f"{Fore.CYAN}{welcome_msg}{Style.RESET_ALL}")
 
-# Upload existing session
 def display_upload_prompt(info_summary):
   msg = "It looks like you have an existing conversation with me. Would you like to upload it so I can pick up where we left off? (y/n)"
   print_bot_message(msg)
@@ -129,7 +152,6 @@ def display_upload_prompt(info_summary):
     print_bot_message("Ok, let's start again from scratch 🙂")
     display_cv_prompt()
 
-# CV upload
 def display_cv_prompt():
   msg = "If you have a recent CV you'd like me to look at to kick things off, please enter the filepath below or drag and drop it into the terminal. You can upload either a .pdf or .doc file.\nOtherwise, just press enter to continue."
   print_bot_message(msg)
@@ -162,10 +184,7 @@ def await_cv_upload():
       print(f"Error: {e}")
       handle_cv_upload_error()
 
-
-# Job search
 def start_job_search():
-  # Get summary of user inputs
   msg = f"""
   Summarize the user inputs you have collected so far related to the job search.
   This summary will be used to do a match against job descriptions.
@@ -190,11 +209,9 @@ Awesome, here are some jobs I found for you!.
   """
   print_bot_message(jobs_msg)
 
-  # Add to memory for conversation context
   memory.chat_memory.add_ai_message(jobs_msg)
 
 
-# Input/Output processing
 def print_system_message(message):
     print(f"{Fore.YELLOW}{message}{Style.RESET_ALL}\n")
 
@@ -207,7 +224,6 @@ def process_input(user_input, loading_text="Thinking", display_result=True):
         output = conversation.predict(input=user_input)
         spinner.ok("✔")
     
-    # Check if output requires a state transition
     for command in commands:
       if command in output:
         output = output.replace(command, "")
@@ -220,21 +236,17 @@ def process_input(user_input, loading_text="Thinking", display_result=True):
     
     return output
 
-# Main App
 def main():
-    
-    # Welcome
+  
     display_welcome()
     
-    # Check if there's a past session
     existing_session = Hunt.load_previous_session()
     if existing_session:
       display_upload_prompt(existing_session)
     else:
-      # Get CV
+
       display_cv_prompt() 
 
-    # Get user input
     while True:
         user_input = input("Input: ")
 
